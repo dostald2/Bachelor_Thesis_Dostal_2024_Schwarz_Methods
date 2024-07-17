@@ -1,0 +1,62 @@
+/*# beginAddLayers #*/
+func bool AddLayers3(mesh3 & Th,real[int] &ssd,int n,real[int] &unssd)
+{
+  //  build a continuous function  uussd (P1) and modifies ssd :
+  //  IN: ssd in the caracteristics function on the input subdomain.
+  //  OUT: ssd is a boolean function, unssd is a smooth function
+  //  ssd = 1 if unssd >0; add n layer of element and unssd = 0 ouside of this layer
+  Ph s;
+  assert(ssd.n==Ph.ndof);
+  assert(unssd.n==Vh.ndof);
+  unssd=0;
+  s[]= ssd;
+  Vh u;
+  varf vM(uu,v)=int3d(Th,qforder=1)(uu*v/volume);
+  matrix M=vM(Ph,Vh);
+  for(int i=0;i<n;++i)
+    {
+      u[]= M*s[];
+      u = u>.1;
+      unssd+= u[];
+      s[]= M'*u[];
+      s = s >0.1;
+    }
+  unssd /= (n);
+  u[]=unssd;
+  ssd=s[];
+  return true;
+}
+/*# endAddLayers #*/
+/*# beginPartition #*/
+func bool SubdomainsPartitionUnity3(mesh3 & Th, real[int] & partdof, int sizeoverlaps, mesh3[int] & aTh, matrix[int] & Rih, matrix[int] & Dih, int[int] & Ndeg, real[int] & VolumeThi)
+{
+  int 	npart=partdof.max+1;
+  mesh3 Thi=Th;                  // freefem's trick, formal definition
+  fespace Vhi(Thi,P1);          // freefem's trick, formal definition
+  Vhi[int] pun(npart);             // local fem functions
+  Vh  sun=0, unssd=0;
+  Ph part;
+  part[]=partdof;
+  for(int i=0;i<npart;++i)
+    {
+      Vh uh=i;
+	    // boolean function 1 in the subdomain 0 elswhere
+	    Ph suppi= abs(part-i)<0.1;
+	    AddLayers3(Th,suppi[],sizeoverlaps,unssd[]);     // overlapping partitions by adding layers
+	    Thi=aTh[i]=trunc(Th,suppi>0,label=10,split=1);   // overlapping mesh, interfaces have label 10
+      //plot(Thi,uh, value=1, dim=3, cmm="domain"+(i+1));
+	    Rih[i]=interpolate(Vhi,Vh,inside=1);                     //  Restriction operator : Vh -> Vhi
+	    pun[i][]=Rih[i]*unssd[];
+	    sun[] += Rih[i]'*pun[i][];
+	    Ndeg[i] = Vhi.ndof;
+	    VolumeThi[i] = int3d(Thi)(1.);
+   }
+  for(int i=0;i<npart;++i)
+    {
+      Thi=aTh[i];
+      pun[i]= pun[i]/sun;
+      Dih[i]=pun[i][]; //diagonal matrix built from a vector
+    }
+  return true;
+}
+/*# endPartition #*/

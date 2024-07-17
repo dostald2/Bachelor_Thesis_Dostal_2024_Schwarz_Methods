@@ -1,0 +1,44 @@
+/*# debutCGSolve #*/  
+// Preconditioned Conjugate Gradient Applied to the system
+// A(un[]) = rhsglobal[]
+// preconditioned by the linear operator 
+// AS: r[] -> AS(r[])
+func real[int] myPCG(real[int] xi,real eps, int nitermax)
+{
+
+    Vh r, un, p, zr, rn, w, er;
+    un[] = xi; 
+    r[] = A(un[]);     
+    r[] -= rhsglobal[];     
+    r[] *= -1.0;                                  
+    zr[] = AS(r[]);
+    real resinit=sqrt(zr[]'*zr[]);
+    p = zr;
+    for(int it=0;it<nitermax;++it)
+      {
+      	//plot(un,value=1,wait=1,fill=1,dim=3,cmm="Approximate solution at iteration "+it);        
+        real relres = sqrt(zr[]'*zr[])/resinit;
+         filei << sizovr << ";"<< npart << ";" << it << ";" << relres << endl; 
+        cout <<  it + " iterations " + " res " + relres << endl;      
+        if(relres < eps)
+           {
+            cout << "CG has converged in " + it + " iterations " << endl;
+            cout << "The relative residual is " +  relres << endl; 
+            break;	
+           }	
+        w[] = A(p[]);                                    
+        real alpha = r[]'*zr[];
+        real aux2 = alpha;
+        real aux3 = w[]'*p[];
+        alpha /= aux3;                     // alpha = (rj,zj)/(Apj,pj);
+        un[] += alpha*p[];                // xj+1 = xj + alpha*p;
+        //plot(un,wait=1,fill=1,value=1,dim=3,cmm=" iteration "+it);
+        r[] -= alpha*w[];                   // rj+1 = rj - alpha*Apj;      
+        zr[] = AS(r[]);                       // zj+1 = M^-1*rj+1;
+        real beta = r[]'*zr[];    
+        beta /= aux2;                      // beta = (rj+1,zj+1)/(rj,zj);
+        p[] *= beta;
+        p[] += zr[];      
+      }
+    return un[];  	
+}

@@ -1,0 +1,4 @@
+metisdual(lpart,Th,npart);
+for(int i=0;i<lpart.n;++i)
+  part[][i]=lpart[i];
+

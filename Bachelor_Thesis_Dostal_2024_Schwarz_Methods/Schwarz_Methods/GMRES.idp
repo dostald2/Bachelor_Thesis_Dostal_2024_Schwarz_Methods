@@ -1,0 +1,64 @@
+// Preconditioned GMRES algorithm Applied to the system
+// M^{-1}Aglobal x = M^{-1}b
+// Here Aglobal denotes the global matrix
+// M^{-1} is the RAS preconditioner based on domain decomposition
+/*# debutGMRESsolve #*/ 
+func real[int] GMRES(real[int] x0, real eps, int nbiter)
+{
+	Vh r, z, v,w,er, un;
+	Vh[int] V(nbiter);                        // orthonormal basis
+	real[int,int] Hn(nbiter+2,nbiter+1); // Hessenberg matrix
+	real[int,int] rot(2,nbiter+2);
+	real[int] g(nbiter+1),g1(nbiter+1);
+	r[]=A(x0);
+	r[] -= rhsglobal[];     
+	r[] *= -1.0; 	
+	z[] = RAS(r[]);           // z= M^{-1}(b-A*x0)
+	g[0]=sqrt(z[]'*z[]);      // initial residual norm 
+    filei << sizovr << ";"<< npart<< ";" << 0 << ";" << 1 << endl; 	
+	V[0][]=1/g[0]*z[];           // first basis vector 
+	for(int it =0;it<nbiter;it++) {	
+	  	 v[]=A(V[it][]);
+	  	 w[]= RAS(v[]);   // w = M^{-1}A*V_it
+	  	 for(int i =0;i<it+1;i++) {
+	  	   Hn(i,it)=w[]'*V[i][];             
+	  	   w[] -=  Hn(i,it)*V[i][]; }
+	  	 Hn(it+1,it)= sqrt(w[]'*w[]);
+	  	 real aux=Hn(it+1,it);
+	  	 for(int i =0;i<it;i++){ 	 // QR decomposition of Hn	
+	  	 	real aa=rot(0,i)*Hn(i,it)+rot(1,i)*Hn(i+1,it);
+	  	 	real bb=-rot(1,i)*Hn(i,it)+rot(0,i)*Hn(i+1,it);
+	  	 	Hn(i,it)=aa;
+	  	 	Hn(i+1,it)=bb; }
+	  	 real sq = sqrt(Hn(it+1,it)^2+Hn(it,it)^2);
+	  	 rot(0,it)=Hn(it,it)/sq;
+	  	 rot(1,it)=Hn(it+1,it)/sq;
+	  	 Hn(it,it)=sq;
+	  	 Hn(it+1,it)=0;
+	  	 g[it+1] = -rot(1,it)*g[it];
+	  	 g[it] = rot(0,it)*g[it];
+	  	 real[int] y(it+1);     	// Reconstruct the solution 
+	  	 for(int i=it;i>=0;i--) {
+	  	 	g1[i]=g[i];
+	  	 	for(int j=i+1;j<it+1;j++)
+	  	 	   	g1[i]=g1[i]-Hn(i,j)*y[j];
+	  	 	y[i]=g1[i]/Hn(i,i);  }
+	  	 un[]=x0;
+	  	 for(int i=0;i<it+1;i++) 
+            un[]= un[]+ y[i]*V[i][];
+         er[]=un[]-uglob[];
+         real relres = abs(g[it+1]/g[0]);
+         cout << "It: "<< it << " Residual = " << relres  <<  endl; 
+         int j = it+1;
+         filei << sizovr << ";"<< npart << ";" << j << ";" << relres << endl; 
+         
+        // plot(un,wait=1,dim=3,fill=1,cmm="Solution at iteration "+it);
+               
+         if(relres < eps) {
+             cout << "GMRES has converged in " + it + " iterations " << endl;
+             cout << "The relative residual is " +  relres << endl; 
+             break;	}           
+         V[it+1][]=1/aux*w[];	}
+     return un[];	
+}
+/*# finGMRESsolve #*/

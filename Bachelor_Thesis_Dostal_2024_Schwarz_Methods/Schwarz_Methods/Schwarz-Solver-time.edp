@@ -1,0 +1,112 @@
+// LOADING LIBRARIES
+load "metis"
+load "medit"
+load "msh3"
+load "tetgen"
+load "PETSc-complex"
+load "gmsh"
+
+// CONSTANTS
+int sizeovrmin = 1;                 // minsize of the overlap
+int sizeovrmax = 10;                 // maxsize of the overlap
+real tol = 1e-10; // tolerance for the iterative method
+int maxit = 200; // maximum number of iterations
+int npartmin = 10; // minimal number of subdomains
+int npartmax = 60; // maximal number of subdomains
+
+// MESH
+string meshFileName = "Wheel.mesh"; // loading mesh
+mesh3 Th = readmesh3(meshFileName);
+//plot(Th, wait=1, fill=1); // plotting mesh
+
+// FINITE ELEMENT SPACE
+fespace Vh(Th, P1);
+fespace Ph(Th, P0);
+Vh u;
+Ph part; // piecewise constant function
+int[int] lpart(Ph.ndof); // giving the decomposition
+
+// PROBLEM
+macro Grad(u) [dx(u), dy(u), dz(u)] // EOM
+func f = 1 ; // right hand side
+func g = 0; // boundarz conditions
+Vh rhsglobal, uglob; // rhs and solution of the global problem
+varf vaglobal(u, v) = int3d(Th)(Grad(u)'*Grad(v)) + on(1, u=g) + int3d(Th)(f*v); //poisson equation
+matrix Aglobal; // Iterative solver
+
+// SAVING DATA
+ofstream filei("datatime.csv");
+filei << "npart;sizovr;time" << endl; 
+for(int npart = npartmin; npart <= npartmax; npart += 10) //loop for increasing number of subdomains
+{
+for (int sizovr = sizeovrmin;sizovr<=sizeovrmax;sizovr += 1)  // loop for increasing the siye of the overlap
+{
+    // DOMAIN DECOMPOSITION DATA STRUCTURES
+    mesh3[int] aTh(npart); // sequence of ovr. meshes
+    matrix[int] Rih(npart); // local restriction operators
+    matrix[int] Dih(npart); // partition of unity operators
+    int[int] Ndeg(npart); // number of dof for each mesh
+    real[int] VolumeThi(npart); // volume of each subdomain
+    matrix[int] aA(npart); // local Dirichlet matrices
+    Vh[int] Z(npart); // coarse space
+
+    // ANOTHER PARTS OF CODES
+    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
+    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+
+    // PARTITION
+    SubdomainsPartitionUnity3(Th, part[], sizovr, aTh, Rih, Dih, Ndeg, VolumeThi);
+
+    // GLOBAL
+    Aglobal = vaglobal(Vh, Vh, solver = UMFPACK); // global matrix
+    rhsglobal[] = vaglobal(0, Vh); // global rhs
+
+    // SOLVERS ON SUBDOMAINS
+    for (int i = 0; i < npart; ++i)
+    {
+        cout << " Domain :" << i << "/" << npart << endl;
+        matrix aT = Aglobal * Rih[i]';
+        aA[i] = Rih[i] * aT;
+        set(aA[i], solver = UMFPACK); // direct solvers
+    }
+    real initiaR = 0; // Variable to store the initial residual
+    bool isFirstIteration = true; // Flag to indicate if it's the first iteration 
+    // SCHWARZ ALGORITHM
+    real t1 = clock();   //start time
+    Vh un = 0; // initial guess
+    Vh rn = rhsglobal;
+    for (int iter = 0; iter < maxit; ++iter)
+    {
+        real err = 0, res;
+        Vh er = 0;
+        for (int i = 0; i < npart; ++i)
+        {
+            real[int] bi = Rih[i] * rn[];
+            real[int] ui = aA[i] ^-1 * bi; // local solve
+            bi = Dih[i] * ui;
+            er[] += Rih[i]' * bi;
+        }
+        un[] += er[]; // build new iterate
+        rn[] = Aglobal * un[]; // computes global residual
+        rn[] = rn[] - rhsglobal[];
+        rn[] *= -1;
+        res = sqrt(rn[]' * rn[]);
+        if (isFirstIteration) {
+        initiaR = res; // Save the initial residual
+        isFirstIteration = false; // Set the flag to false after first iteration
+        }
+        res = res/initiaR;
+        cout << "Iteration: " << iter <<" Residual = " << res << endl;
+        if (res < tol) break;
+    }
+    real t2 = clock(); //end time
+    real t = t2 - t1; // time of the iteration
+    filei << npart << ";" << sizovr << ";" << t << endl; // Save to CSV  
+    cout << "Elapsed CPU time: " << t << " seconds" << endl; //write time
+
+    }
+   // plot(un, value=1, fill=1, dim=3, cmm="Final solution", ps="solution.eps"); //final solution
+}
+
+
+

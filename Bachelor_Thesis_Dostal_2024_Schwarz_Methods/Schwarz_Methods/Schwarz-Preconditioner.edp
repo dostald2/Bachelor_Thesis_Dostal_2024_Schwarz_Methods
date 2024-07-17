@@ -1,0 +1,209 @@
+// LOADING LIBRARIES
+load "metis"
+load "medit"
+load "msh3"
+load "tetgen"
+load "PETSc-complex"
+load "gmsh"
+
+// CONSTANTS
+int experiment = 0; // 1= experiment with increasing overlap, 0 = increasing number of subdomains  
+int method = 1; //1=RAS, 0= ASM
+real tol = 1e-10; // tolerance for the iterative method
+int maxit = 200; // maximum number of iterations
+int sizeovrmin = 1;                 // minsize of the overlap
+int sizeovrmax = 10;                 // maxsize of the overlap
+int npartmin = 10; // minimal number of subdomains
+int npartmax = 60; // maximal number of subdomains
+
+// MESH
+string meshFileName = "Wheel.mesh"; // loading mesh
+mesh3 Th = readmesh3(meshFileName);
+//plot(Th, wait=1, fill=1); // plotting mesh
+
+// FINITE ELEMENT SPACE
+fespace Vh(Th, P1);
+fespace Ph(Th, P0);
+Vh u;
+Ph part; // piecewise constant function
+int[int] lpart(Ph.ndof); // giving the decomposition
+
+// PROBLEM
+macro Grad(u) [dx(u), dy(u), dz(u)] // EOM
+func f = 0.5*x*y + x*z^2 ; // right hand side
+func g = 0;
+Vh rhsglobal, uglob; // rhs and solution of the global problem
+varf vaglobal(u, v) = int3d(Th)(Grad(u)'*Grad(v)) + on(1, u=g) + int3d(Th)(f*v);
+matrix Aglobal; // Iterative solver
+
+if(experiment  == 1) {  //experimnet with increasing the size of the overlap
+     
+    int npart = 30; // total number of subdomains
+
+    // DOMAIN DECOMPOSITION DATA STRUCTURES
+    mesh3[int] aTh(npart); // sequence of ovr. meshes
+    matrix[int] Rih(npart); // local restriction operators
+    matrix[int] Dih(npart); // partition of unity operators
+    int[int] Ndeg(npart); // number of dof for each mesh
+    real[int] VolumeThi(npart); // volume of each subdomain
+    matrix[int] aA(npart); // local Dirichlet matrices
+    Vh[int] Z(npart); // coarse space
+
+    // ANOTHER PARTS OF CODES
+    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
+    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+
+    ofstream filei("datapreconditionerRASsizovr.csv");
+    filei << "sizovr;npart;iteration;residual" << endl; 
+for(int sizovr = sizeovrmin;sizovr<=sizeovrmax;sizovr += 1) //loop for increasing the size of the overlap
+{
+    // PARTITION
+    SubdomainsPartitionUnity3(Th, part[], sizovr, aTh, Rih, Dih, Ndeg, VolumeThi);
+
+    Aglobal = vaglobal(Vh, Vh, solver = UMFPACK); // global matrix
+    rhsglobal[] = vaglobal(0, Vh); // global rhs
+
+    // SOLVERS ON SUBDOMAINS
+    for (int i = 0; i < npart; ++i)
+    {
+        cout << " Domain :" << i << "/" << npart << endl;
+        matrix aT = Aglobal * Rih[i]';
+        aA[i] = Rih[i] * aT;
+        set(aA[i], solver = UMFPACK); // direct solvers
+    }
+
+
+    func real[int] A(real[int] &x)
+{
+	Vh Ax;
+	Ax[]= Aglobal*x; 
+	return Ax[];
+}
+
+func real[int] RAS(real[int] &l)      
+{	
+
+   Vh s = 0;
+   for(int i=0;i<npart;++i)
+     {
+       real[int] bi = Rih[i]*l;        // restricts rhs
+       real[int] ui = aA[i] ^-1 * bi;  // local solves
+       bi = Dih[i]*ui; // partition of unity
+       s[] += Rih[i]'*ui;              // prolongation      
+      }   
+   return s[];	
+}  
+
+func real[int] AS(real[int] &l)      
+{	
+
+   Vh s = 0;
+   for(int i=0;i<npart;++i)
+     {
+       real[int] bi = Rih[i]*l;        // restricts rhs
+       real[int] ui = aA[i] ^-1 * bi;  // local solves
+       s[] += Rih[i]'*ui;              // prolongation      
+      }   
+   return s[];	
+} 
+include "../../Bachelor/Schwarz_Mesh3/PCG.idp"
+include "../../Bachelor/Schwarz_Mesh3/GMRES.idp"
+Vh un = 0, sol; 
+if(method == 1) {                                 // initial guess un and final solution 
+   sol[] = GMRES(un[], tol, maxit);       // PCG with initial guess un
+}
+else{
+   sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
+}
+//plot(sol,cmm=" Final solution",dim=3,fill=1,value=1); //plot final solution
+/*# finPCGSolve #*/
+}
+
+}
+
+else{ //experiment with the incresing number of subdomains
+
+    ofstream filei("datapreconditionerASMnpart.csv");
+    filei << "sizovr;npart;iteration;residual" << endl; 
+
+    for(int npart = npartmin;npart<=npartmax;npart += 10) //loop for increasing number of subdomains
+{
+    int sizovr = 1; // size of the overlap
+    // DOMAIN DECOMPOSITION DATA STRUCTURES
+    mesh3[int] aTh(npart); // sequence of ovr. meshes
+    matrix[int] Rih(npart); // local restriction operators
+    matrix[int] Dih(npart); // partition of unity operators
+    int[int] Ndeg(npart); // number of dof for each mesh
+    real[int] VolumeThi(npart); // volume of each subdomain
+    matrix[int] aA(npart); // local Dirichlet matrices
+    Vh[int] Z(npart); // coarse space
+
+    // ANOTHER PARTS OF CODES
+    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
+    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+
+    // PARTITION
+    SubdomainsPartitionUnity3(Th, part[], sizovr, aTh, Rih, Dih, Ndeg, VolumeThi);
+
+    // GLOBAL SOLVING
+    Aglobal = vaglobal(Vh, Vh, solver = UMFPACK); // global matrix
+    rhsglobal[] = vaglobal(0, Vh); // global rhs
+
+    // SOLVERS ON SUBDOMAINS
+    for (int i = 0; i < npart; ++i)
+    {
+        cout << " Domain :" << i << "/" << npart << endl;
+        matrix aT = Aglobal * Rih[i]';
+        aA[i] = Rih[i] * aT;
+        set(aA[i], solver = UMFPACK); // direct solvers
+    }
+
+
+    func real[int] A(real[int] &x)
+{
+	Vh Ax;
+	Ax[]= Aglobal*x; 
+	return Ax[];
+}
+
+   func real[int] RAS(real[int] &l)      
+{	
+
+   Vh s = 0;
+   for(int i=0;i<npart;++i)
+     {
+       real[int] bi = Rih[i]*l;        // restricts rhs
+       real[int] ui = aA[i] ^-1 * bi;  // local solves
+       bi = Dih[i]*ui; // partition of unity
+       s[] += Rih[i]'*ui;              // prolongation      
+      }   
+   return s[];	
+}  
+
+func real[int] AS(real[int] &l)      
+{	
+
+   Vh s = 0;
+   for(int i=0;i<npart;++i)
+     {
+       real[int] bi = Rih[i]*l;        // restricts rhs
+       real[int] ui = aA[i] ^-1 * bi;  // local solves
+       s[] += Rih[i]'*ui;              // prolongation      
+      }   
+   return s[];	
+} 
+include "../../Bachelor/Schwarz_Mesh3/PCG.idp"
+include "../../Bachelor/Schwarz_Mesh3/GMRES.idp"
+Vh un = 0, sol; 
+if(method == 1) {                                 // initial guess un and final solution 
+   sol[] = GMRES(un[], tol, maxit);       // PCG with initial guess un
+}
+else{
+   sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
+}
+//plot(sol,cmm=" Final solution",dim=3,fill=1,value=1); //plotin final solution
+/*# finPCGSolve #*/
+
+}
+
+}
