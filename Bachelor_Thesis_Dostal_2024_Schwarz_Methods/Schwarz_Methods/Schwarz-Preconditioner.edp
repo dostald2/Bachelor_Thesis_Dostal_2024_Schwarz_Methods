@@ -7,8 +7,7 @@ load "PETSc-complex"
 load "gmsh"
 
 // CONSTANTS
-int experiment = 0; // 1= experiment with increasing overlap, 0 = increasing number of subdomains  
-int method = 1; //1=RAS, 0= ASM
+int experiment = 1; // 1= experiment with increasing overlap, 0 = increasing number of subdomains  
 real tol = 1e-10; // tolerance for the iterative method
 int maxit = 200; // maximum number of iterations
 int sizeovrmin = 1;                 // minsize of the overlap
@@ -50,10 +49,10 @@ if(experiment  == 1) {  //experimnet with increasing the size of the overlap
     Vh[int] Z(npart); // coarse space
 
     // ANOTHER PARTS OF CODES
-    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
-    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/createPartition3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/decomp3d.idp"
 
-    ofstream filei("datapreconditionerRASsizovr.csv");
+    ofstream filei("datapreconditionerASMsizovr.csv");
     filei << "sizovr;npart;iteration;residual" << endl; 
 for(int sizovr = sizeovrmin;sizovr<=sizeovrmax;sizovr += 1) //loop for increasing the size of the overlap
 {
@@ -79,20 +78,7 @@ for(int sizovr = sizeovrmin;sizovr<=sizeovrmax;sizovr += 1) //loop for increasin
 	Ax[]= Aglobal*x; 
 	return Ax[];
 }
-
-func real[int] RAS(real[int] &l)      
-{	
-
-   Vh s = 0;
-   for(int i=0;i<npart;++i)
-     {
-       real[int] bi = Rih[i]*l;        // restricts rhs
-       real[int] ui = aA[i] ^-1 * bi;  // local solves
-       bi = Dih[i]*ui; // partition of unity
-       s[] += Rih[i]'*ui;              // prolongation      
-      }   
-   return s[];	
-}  
+ 
 
 func real[int] AS(real[int] &l)      
 {	
@@ -106,15 +92,10 @@ func real[int] AS(real[int] &l)
       }   
    return s[];	
 } 
-include "../../Bachelor/Schwarz_Mesh3/PCG.idp"
-include "../../Bachelor/Schwarz_Mesh3/GMRES.idp"
+include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/PCG.idp"
 Vh un = 0, sol; 
-if(method == 1) {                                 // initial guess un and final solution 
-   sol[] = GMRES(un[], tol, maxit);       // PCG with initial guess un
-}
-else{
-   sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
-}
+sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
+
 //plot(sol,cmm=" Final solution",dim=3,fill=1,value=1); //plot final solution
 /*# finPCGSolve #*/
 }
@@ -139,8 +120,8 @@ else{ //experiment with the incresing number of subdomains
     Vh[int] Z(npart); // coarse space
 
     // ANOTHER PARTS OF CODES
-    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
-    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/createPartition3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/decomp3d.idp"
 
     // PARTITION
     SubdomainsPartitionUnity3(Th, part[], sizovr, aTh, Rih, Dih, Ndeg, VolumeThi);
@@ -166,20 +147,6 @@ else{ //experiment with the incresing number of subdomains
 	return Ax[];
 }
 
-   func real[int] RAS(real[int] &l)      
-{	
-
-   Vh s = 0;
-   for(int i=0;i<npart;++i)
-     {
-       real[int] bi = Rih[i]*l;        // restricts rhs
-       real[int] ui = aA[i] ^-1 * bi;  // local solves
-       bi = Dih[i]*ui; // partition of unity
-       s[] += Rih[i]'*ui;              // prolongation      
-      }   
-   return s[];	
-}  
-
 func real[int] AS(real[int] &l)      
 {	
 
@@ -192,15 +159,10 @@ func real[int] AS(real[int] &l)
       }   
    return s[];	
 } 
-include "../../Bachelor/Schwarz_Mesh3/PCG.idp"
-include "../../Bachelor/Schwarz_Mesh3/GMRES.idp"
+include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/PCG.idp"
 Vh un = 0, sol; 
-if(method == 1) {                                 // initial guess un and final solution 
-   sol[] = GMRES(un[], tol, maxit);       // PCG with initial guess un
-}
-else{
-   sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
-}
+sol[] =  myPCG(un[], tol, maxit);       // PCG with initial guess un
+
 //plot(sol,cmm=" Final solution",dim=3,fill=1,value=1); //plotin final solution
 /*# finPCGSolve #*/
 

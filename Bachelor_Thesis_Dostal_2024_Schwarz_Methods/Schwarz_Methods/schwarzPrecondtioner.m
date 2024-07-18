@@ -1,18 +1,18 @@
-experiment = 1; % 1= experiment with increasing overlap, 0 = increasing number of subdomains 
-method = 1; %1=RAS, 0= ASM
+experiment = 0; % 1= experiment with increasing overlap, 0 = increasing number of subdomains 
+
 
 if experiment == 1
 
    % Read the data from the CSV file
-   fid = fopen('datasizovr.csv');
+   fid = fopen('datapreconditionerASMsizovr.csv');  
    header = fgetl(fid); % Skip the header line
    data = textscan(fid, '%d %d %f %f', 'Delimiter', ';');
    fclose(fid);
 
    % Extract columns from the data
    sizov = data{1}; % number of parts
-   iterations = data{2}; % number of iterations
-   residuals = data{3}; % residual errors
+   iterations = data{3}; % number of iterations
+   residuals = data{4}; % residual errors
 
    % Create a figure for the plot
    figure;
@@ -33,6 +33,8 @@ if experiment == 1
    xlabel('Iterations');
    ylabel('Relative residual norm');
 
+
+
    % Fig settings
    set(gca, 'YScale', 'log','FontSize', 12);
    legend('show');
@@ -41,25 +43,24 @@ if experiment == 1
    fig.Units = 'inches';  
    fig.Position = [1, 1, 9, 5];  % [left, bottom, width, height] 
    %Saving fid as PDF   
-   if method == 1
-      exportgraphics(gcf, 'convergenceSizovrRAS.pdf', 'ContentType', 'vector');
-   elseif method == 0
-      exportgraphics(gcf, 'convergenceSizovrASM.pdf', 'ContentType', 'vector'); 
-   end   
+
+   exportgraphics(gcf, 'convergenceSizovrASMpre.pdf', 'ContentType', 'vector'); 
+
    hold off;
 
  elseif experiment == 0
 
-    % Read the data from the CSV file
-    fid = fopen('datanpart.csv');
+
+   % Read the data from the CSV file
+    fid = fopen('datapreconditionerASMnpart.csv');
     header = fgetl(fid); % Skip the header line
     data = textscan(fid, '%d %d %f %f', 'Delimiter', ';');
     fclose(fid);
 
     % Extract columns from the data
-    nparts = data{1}; % number of parts
-    iterations = data{2}; % number of iterations
-    residuals = data{3}; % residual errors
+    nparts = data{2}; % number of parts
+    iterations = data{3}; % number of iterations
+    residuals = data{4}; % residual errors
 
     % Create a figure for the plot
     figure;
@@ -85,12 +86,9 @@ if experiment == 1
     grid off;
     fig = gcf;
     fig.Units = 'inches';  
-    fig.Position = [1, 1, 9, 5];  % [left, bottom, width, height]
-    %Saving fid as PDF    
-    if method == 1
-      exportgraphics(gcf, 'convergenceNpartRAS.pdf', 'ContentType', 'vector');
-    elseif method == 0
-      exportgraphics(gcf, 'convergenceNpartASM.pdf', 'ContentType', 'vector');
-    end   
+    fig.Position = [1, 1, 9, 5];  % [left, bottom, width, height] 
+    exportgraphics(gcf, 'convergenceNpartASMpre.pdf', 'ContentType', 'vector');
+   
     hold off;
- end
+end
+

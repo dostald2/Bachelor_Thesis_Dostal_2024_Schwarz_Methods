@@ -7,7 +7,7 @@ load "PETSc-complex"
 load"gmsh"
 
 // CONSTANTS
-int experiment = 1; // 1= experiment with increasing overlap, 0 = increasing number of subdomains  
+int experiment = 0; // 1= experiment with increasing overlap, 0 = increasing number of subdomains  
 real tol = 1e-10; // tolerance for the iterative method
 int maxit = 200; // maximum number of iterations
 int sizeovrmin = 1;                 // minsize of the overlap
@@ -50,8 +50,8 @@ matrix[int] aA(npart);                      // local Dirichlet matrices
 Vh[int]  Z(npart);                             // coarse space
 
 //ANOTHER PARTS OF CODES
-include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
-include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/createPartition3d.idp"
+include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/decomp3d.idp"
 
 //SAVING DATA
 ofstream filei( "datasizovr.csv");
@@ -135,8 +135,8 @@ for (int npart = npartmin; npart <= npartmax; npart += 10) //loop for increasing
     Vh[int] Z(npart); // coarse space
 
     // ANOTHER PARTS OF CODES
-    include "../../Bachelor/Schwarz_Mesh3/createPartition3d.idp"
-    include "../../Bachelor/Schwarz_Mesh3/decomp3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/createPartition3d.idp"
+    include "../../Bachelor_Thesis_Dostal_2024_Schwarz_Methods/Schwarz_Methods/decomp3d.idp"
 
     // PARTITION
     SubdomainsPartitionUnity3(Th, part[], sizovr, aTh, Rih, Dih, Ndeg, VolumeThi);

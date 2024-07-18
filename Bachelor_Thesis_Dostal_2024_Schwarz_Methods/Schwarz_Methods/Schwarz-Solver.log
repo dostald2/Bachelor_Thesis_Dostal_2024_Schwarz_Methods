@@ -1,0 +1,28 @@
+  -- FESpace: Nb of Nodes 7309 Nb of DoF 7309
+  -- FESpace: Nb of Nodes 6735 Nb of DoF 6735
+  -- FESpace: Nb of Nodes 6645 Nb of DoF 6645
+  -- FESpace: Nb of Nodes 6988 Nb of DoF 6988
+  -- FESpace: Nb of Nodes 7596 Nb of DoF 7596
+  -- FESpace: Nb of Nodes 6828 Nb of DoF 6828
+  -- FESpace: Nb of Nodes 7650 Nb of DoF 7650
+  -- FESpace: Nb of Nodes 6540 Nb of DoF 6540
+  -- FESpace: Nb of Nodes 7834 Nb of DoF 7834
+  -- FESpace: Nb of Nodes 6605 Nb of DoF 6605
+ Domain :0/10
+ Domain :1/10
+ Domain :2/10
+ Domain :3/10
+ Domain :4/10
+ Domain :5/10
+ Domain :6/10
+ Domain :7/10
+ Domain :8/10
+ Domain :9/10
+Iteration: 0 Residual = 1
+Iteration: 1 Residual = 0.0681922
+Iteration: 2 Residual = 0.0154164
+Iteration: 3 Residual = 0.00391841
+Iteration: 4 Residual = 0.000974413
+Iteration: 5 Residual = 0.000263076
+Iteration: 6 Residual = 7.0878e-05
+ try getConsole C:\Users\dejvi\OneDrive\Documents\GitHub\Bachelor_Thesis_Dostal_2024_Schwarz_Methods\Bachelor_Thesis_Dostal_2024_Schwarz_Methods\Schwarz_Methods\Schwarz-Solver.edp
