@@ -14,7 +14,7 @@ This repository contains the code and resources used for the numerical experimen
 - `PCG.idp`: Script implementing the preconditioned Conjugate Gradient method.
 - `Wheel.mesh`: Mesh file representing the toothed metallic wheel used in the numerical experiments.
 - `MoreComplexDomain.mesh`: Mesh file representing the more complex domain used in the numerical experiments.
-- `SchwarzPreconditioner.m`: MATLAB script for data processing the Schwarz methods as preconditioner for CG methods.
+- `SchwarzPreconditioner.m`: MATLAB script for data processing the Schwarz methods as preconditioner for CG method.
 - `SchwarzSolver.m`: MATLAB script for data processing Schwarz methods as stand-alone solvers.    
 
 ### Convergence_Analysis
